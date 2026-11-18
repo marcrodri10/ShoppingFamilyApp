@@ -1,0 +1,10 @@
+# Usamos el SDK pesado para tener las herramientas de compilación y hot-reload
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+
+# Nos movemos a la carpeta donde el docker-compose inyectará tu código
+WORKDIR /app
+
+# FÍJATE: No hay EXPOSE 8080 porque el worker no recibe peticiones HTTP
+
+# Lanzamos el vigilante para que recompile en tiempo real al guardar en VS Code
+CMD ["dotnet", "watch", "run", "--no-launch-profile"]

@@ -1,0 +1,9 @@
+http://localhost {
+    header -Server
+
+    # El tráfico /api/ sigue yendo al contenedor de .NET dentro de Docker
+    reverse_proxy /api/* net-api:8080
+
+    # El tráfico web sale de Docker hacia tu terminal WSL2 (donde corre Bun)
+    reverse_proxy host.docker.internal:3000
+}

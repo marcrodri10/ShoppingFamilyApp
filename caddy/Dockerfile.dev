@@ -1,0 +1,9 @@
+# caddy/Dockerfile.dev
+FROM caddy:2-alpine
+
+# En Caddy no hace falta borrar nada previo.
+# Simplemente sobrescribimos el archivo por defecto con el tuyo.
+COPY Caddyfile /etc/caddy/Caddyfile
+
+# Exponemos los puertos HTTP y HTTPS
+EXPOSE 80 443

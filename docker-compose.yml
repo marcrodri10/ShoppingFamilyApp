@@ -1,0 +1,138 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgresdb
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgresdb_data:/var/lib/postgresql/data
+    networks:
+      - db-network
+
+  #web:
+    #build: 
+      #context: web
+      #dockerfile: Dockerfile.dev
+    #container_name: shoppingfamilyapp
+    #ports:
+      #- "3000:3000"
+    #volumes:
+      #- ./web:/app
+      #- /app/node_modules
+      #- /app/.next
+    #environment:
+      #- NODE_ENV=development
+      #- WATCHPACK_POLLING=true
+    #command: npm run dev
+    #depends_on:
+      #- net-api
+    #networks:
+      #- web-network
+      #- api-network
+
+  net-api:
+    build: 
+      context: net-api
+      dockerfile: Dockerfile.dev
+    container_name: shoppingfamilyapi
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      # 1. El puente bidireccional: Mapea tu código fuente C# al contenedor
+      - ./net-api:/app
+      # 2. Los escudos de aislamiento: Evitan conflictos de compilación entre Windows y Linux
+      - /app/bin
+      - /app/obj
+      # 3. Mapeo del paquete NuGet (Opcional pero recomendado para caché)
+      - ~/.nuget/packages:/root/.nuget/packages
+    environment:
+      # Activa la página de errores de desarrollo y Swagger (la interfaz web de la API)
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Fuerza a la API a escuchar en el puerto correcto para contenedores
+      - ASPNETCORE_URLS=http://+:8080
+      # Cadena de conexión directa al contenedor 'postgres' que creamos antes
+      - ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - api-network
+      - db-network
+      - rabbitmq-network
+
+  net-worker:
+    build:
+      context: net-worker
+      dockerfile: Dockerfile.dev
+    container_name: shoppingfamilyworker
+    restart: always
+    volumes:
+      - ./net-worker:/app
+      - /app/bin
+      - /app/obj
+      - ~/.nuget/packages:/root/.nuget/packages
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      # Conexión a la base de datos (por si el worker tiene que guardar el resultado de su tarea)
+      - ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      # Conexión a las colas (el host es 'rabbitmq', el nombre del contenedor)
+      - ConnectionStrings__RabbitMQ=amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - db-network
+      - rabbitmq-network
+  
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # Puerto para la comunicación de la cola
+      - "15672:15672" # Puerto para la interfaz de administración web
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - rabbitmq-network
+      - api-network
+      - db-network
+
+  caddy:
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile.dev
+    container_name: caddy-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - net-api
+    networks:
+      - api-network
+
+networks:
+  web-network:
+    name: web-network
+  db-network:
+    name: db-network
+  api-network:
+    name: api-network
+  rabbitmq-network:
+    name: rabbitmq-network
+
+volumes:
+  postgresdb_data:
+  rabbitmq_data:
+  caddy_data:
+  caddy_config:

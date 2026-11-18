@@ -1,0 +1,26 @@
+# Secretos
+.env
+.env.*
+!.env.example
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Node / web
+node_modules/
+dist/
+build/
+
+# Docker / datos locales
+postgresdb_data/
+rabbitmq_data/
+caddy_data/
+caddy_config
+
+# IDE y logs
+.idea/
+.vscode/
+*.log

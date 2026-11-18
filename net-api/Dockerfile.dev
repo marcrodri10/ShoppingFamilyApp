@@ -1,0 +1,11 @@
+# Usamos la imagen pesada (SDK) porque necesitamos las herramientas de compilación
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+
+# Nos movemos a la carpeta que hemos mapeado en el docker-compose.yml
+WORKDIR /app
+
+# Exponemos el puerto estándar de .NET para contenedores
+EXPOSE 8080
+
+# Lanzamos el vigilante (Hot-Reload) en lugar del .dll compilado
+CMD ["dotnet", "watch", "run", "--no-launch-profile"]
